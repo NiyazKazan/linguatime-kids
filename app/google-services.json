@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1022170954986",
+    "project_id": "linguatime-kids",
+    "storage_bucket": "linguatime-kids.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1022170954986:android:ec25b482df2a036968ab93",
+        "android_client_info": {
+          "package_name": "com.linguatime.kids"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC4tezd4dB4AWG1VYbUAZuIxBkcitjFtpg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
