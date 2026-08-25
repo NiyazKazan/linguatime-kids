@@ -12,15 +12,21 @@ import androidx.compose.runtime.setValue
 import com.linguatime.kids.data.AuthRepository
 import com.linguatime.kids.data.ChildRepository
 import com.linguatime.kids.data.DeviceStorage
+import com.linguatime.kids.data.Lesson
+import com.linguatime.kids.data.LessonRepository
+import com.linguatime.kids.data.RewardRepository
 import com.linguatime.kids.screens.ChildHomeScreen
 import com.linguatime.kids.screens.ChildLoginScreen
+import com.linguatime.kids.screens.LessonScreen
+import com.linguatime.kids.screens.LessonsListScreen
 import com.linguatime.kids.screens.ParentAddChildScreen
 import com.linguatime.kids.screens.ParentHomeScreen
 import com.linguatime.kids.screens.ParentPinSetupScreen
+import com.linguatime.kids.screens.ParentScreenTimeSettings
 import com.linguatime.kids.screens.ParentSignInScreen
 import com.linguatime.kids.screens.ParentSignUpScreen
+import com.linguatime.kids.screens.ParentTimeRequestsScreen
 import com.linguatime.kids.screens.RoleSelectionScreen
-import com.linguatime.kids.screens.StubScreen
 
 enum class AppScreen {
     ROLE_SELECTION,
@@ -29,9 +35,12 @@ enum class AppScreen {
     PARENT_PIN_SETUP,
     PARENT_ADD_CHILD,
     PARENT_HOME,
+    PARENT_SCREEN_TIME_SETTINGS,
+    PARENT_TIME_REQUESTS,
     CHILD_LOGIN,
     CHILD_HOME,
-    CHILD_FLOW
+    CHILD_LESSONS_LIST,
+    CHILD_LESSON
 }
 
 class MainActivity : ComponentActivity() {
@@ -43,7 +52,11 @@ class MainActivity : ComponentActivity() {
                 Surface {
                     val repository = remember { AuthRepository() }
                     val childRepository = remember { ChildRepository() }
+                    val lessonRepository = remember { LessonRepository() }
+                    val rewardRepository = remember { RewardRepository() }
                     var screen by remember { mutableStateOf(AppScreen.ROLE_SELECTION) }
+                    var selectedLesson by remember { mutableStateOf<Lesson?>(null) }
+                    var selectedChildId by remember { mutableStateOf<String?>(null) }
 
                     when (screen) {
                         AppScreen.ROLE_SELECTION -> RoleSelectionScreen(
@@ -89,7 +102,28 @@ class MainActivity : ComponentActivity() {
                             repository = repository,
                             childRepository = childRepository,
                             onAddChild = { screen = AppScreen.PARENT_ADD_CHILD },
+                            onScreenTimeSettings = { childId ->
+                                selectedChildId = childId
+                                screen = AppScreen.PARENT_SCREEN_TIME_SETTINGS
+                            },
+                            onTimeRequests = { screen = AppScreen.PARENT_TIME_REQUESTS },
                             onLoggedOut = { screen = AppScreen.ROLE_SELECTION }
+                        )
+                        AppScreen.PARENT_SCREEN_TIME_SETTINGS -> {
+                            val childId = selectedChildId
+                            if (childId != null) {
+                                ParentScreenTimeSettings(
+                                    childId = childId,
+                                    rewardRepository = rewardRepository,
+                                    onSaved = { screen = AppScreen.PARENT_HOME },
+                                    onBack = { screen = AppScreen.PARENT_HOME }
+                                )
+                            }
+                        }
+                        AppScreen.PARENT_TIME_REQUESTS -> ParentTimeRequestsScreen(
+                            authRepository = repository,
+                            rewardRepository = rewardRepository,
+                            onBack = { screen = AppScreen.PARENT_HOME }
                         )
                         AppScreen.CHILD_LOGIN -> ChildLoginScreen(
                             childRepository = childRepository,
@@ -100,15 +134,33 @@ class MainActivity : ComponentActivity() {
                         AppScreen.CHILD_HOME -> ChildHomeScreen(
                             childId = deviceStorage.childId() ?: "",
                             childRepository = childRepository,
+                            onLessonClick = { screen = AppScreen.CHILD_LESSONS_LIST },
                             onLoggedOut = {
                                 deviceStorage.saveChildId(null)
                                 screen = AppScreen.ROLE_SELECTION
                             }
                         )
-                        AppScreen.CHILD_FLOW -> StubScreen(
-                            title = "Зона ребёнка (в разработке)",
-                            onBack = { screen = AppScreen.ROLE_SELECTION }
+                        AppScreen.CHILD_LESSONS_LIST -> LessonsListScreen(
+                            childId = deviceStorage.childId() ?: "",
+                            lessonRepository = lessonRepository,
+                            onLessonClick = { lesson ->
+                                selectedLesson = lesson
+                                screen = AppScreen.CHILD_LESSON
+                            },
+                            onBack = { screen = AppScreen.CHILD_HOME }
                         )
+                        AppScreen.CHILD_LESSON -> {
+                            val lesson = selectedLesson
+                            if (lesson != null) {
+                                LessonScreen(
+                                    childId = deviceStorage.childId() ?: "",
+                                    lesson = lesson,
+                                    lessonRepository = lessonRepository,
+                                    onComplete = { screen = AppScreen.CHILD_HOME },
+                                    onBack = { screen = AppScreen.CHILD_LESSONS_LIST }
+                                )
+                            }
+                        }
                     }
                 }
             }
