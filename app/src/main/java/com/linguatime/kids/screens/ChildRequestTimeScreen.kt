@@ -63,11 +63,7 @@ fun ChildRequestTimeScreen(
     val minutes = minutesInput.toIntOrNull() ?: 0
     val cost = minutes * pointsPerMin
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp)
-    ) {
+    Column(modifier = Modifier.fillMaxSize().padding(24.dp)) {
         Text("Запросить время", style = MaterialTheme.typography.headlineSmall)
         Spacer(modifier = Modifier.height(8.dp))
         Text("Твои баллы: $pointsBalance", style = MaterialTheme.typography.titleMedium)
@@ -76,38 +72,23 @@ fun ChildRequestTimeScreen(
         if (loading) {
             CircularProgressIndicator()
         } else {
-            ExposedDropdownMenuBox(
-                expanded = expanded,
-                onExpandedChange = { expanded = !expanded }
-            ) {
+            ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
                 OutlinedTextField(
-                    value = selectedCategory,
-                    onValueChange = {},
-                    readOnly = true,
+                    value = selectedCategory, onValueChange = {}, readOnly = true,
                     label = { Text("Категория") },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .menuAnchor()
+                    modifier = Modifier.fillMaxWidth().menuAnchor()
                 )
-                ExposedDropdownMenu(
-                    expanded = expanded,
-                    onDismissRequest = { expanded = false }
-                ) {
+                ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                     categories.forEach { category ->
-                        DropdownMenuItem(
-                            text = { Text(category) },
-                            onClick = {
-                                selectedCategory = category
-                                expanded = false
-                            }
-                        )
+                        DropdownMenuItem(text = { Text(category) }, onClick = {
+                            selectedCategory = category
+                            expanded = false
+                        })
                     }
                 }
             }
-
             Spacer(modifier = Modifier.height(16.dp))
-
             OutlinedTextField(
                 value = minutesInput,
                 onValueChange = { minutesInput = it.filter { c -> c.isDigit() } },
@@ -115,20 +96,13 @@ fun ChildRequestTimeScreen(
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
-
             Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "Стоимость: $cost баллов",
-                style = MaterialTheme.typography.bodyMedium
-            )
-
+            Text(text = "Стоимость: $cost баллов", style = MaterialTheme.typography.bodyMedium)
             if (error != null) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(text = error!!, color = MaterialTheme.colorScheme.error)
             }
-
             Spacer(modifier = Modifier.height(24.dp))
-
             Button(
                 onClick = {
                     when {
@@ -140,11 +114,9 @@ fun ChildRequestTimeScreen(
                             scope.launch {
                                 try {
                                     rewardRepository.createTimeRequest(
-                                        childId = childId,
-                                        childName = childName,
+                                        childId = childId, childName = childName,
                                         category = selectedCategory,
-                                        minutes = minutes,
-                                        pointsCost = cost
+                                        minutes = minutes, pointsCost = cost
                                     )
                                     onRequested()
                                 } catch (e: Exception) {
@@ -161,10 +133,7 @@ fun ChildRequestTimeScreen(
                 Text(if (isRequesting) "Отправляем..." else "Отправить запрос родителю")
             }
         }
-
         Spacer(modifier = Modifier.height(16.dp))
-        TextButton(onClick = onBack) {
-            Text("Назад")
-        }
+        TextButton(onClick = onBack) { Text("Назад") }
     }
 }
