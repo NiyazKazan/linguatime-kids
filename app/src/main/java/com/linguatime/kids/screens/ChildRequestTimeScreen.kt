@@ -30,7 +30,6 @@ import com.linguatime.kids.data.RewardPolicy
 import com.linguatime.kids.data.RewardRepository
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChildRequestTimeScreen(
     childId: String,
