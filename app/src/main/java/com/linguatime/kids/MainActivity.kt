@@ -54,6 +54,7 @@ class MainActivity : ComponentActivity() {
                     val childRepository = remember { ChildRepository() }
                     val lessonRepository = remember { LessonRepository() }
                     val rewardRepository = remember { RewardRepository() }
+                    
                     var screen by remember { mutableStateOf(AppScreen.ROLE_SELECTION) }
                     var selectedLesson by remember { mutableStateOf<Lesson?>(null) }
                     var selectedChildId by remember { mutableStateOf<String?>(null) }
@@ -61,18 +62,10 @@ class MainActivity : ComponentActivity() {
                     when (screen) {
                         AppScreen.ROLE_SELECTION -> RoleSelectionScreen(
                             onParentClick = {
-                                screen = if (repository.currentUser != null) {
-                                    AppScreen.PARENT_HOME
-                                } else {
-                                    AppScreen.PARENT_SIGN_IN
-                                }
+                                screen = if (repository.currentUser != null) AppScreen.PARENT_HOME else AppScreen.PARENT_SIGN_IN
                             },
                             onChildClick = {
-                                screen = if (deviceStorage.childId() != null) {
-                                    AppScreen.CHILD_HOME
-                                } else {
-                                    AppScreen.CHILD_LOGIN
-                                }
+                                screen = if (deviceStorage.childId() != null) AppScreen.CHILD_HOME else AppScreen.CHILD_LOGIN
                             }
                         )
                         AppScreen.PARENT_SIGN_IN -> ParentSignInScreen(

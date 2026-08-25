@@ -26,6 +26,7 @@ import com.linguatime.kids.data.ChildRepository
 fun ChildHomeScreen(
     childId: String,
     childRepository: ChildRepository,
+    onLessonClick: () -> Unit,
     onLoggedOut: () -> Unit
 ) {
     var child by remember { mutableStateOf<ChildProfile?>(null) }
@@ -54,12 +55,20 @@ fun ChildHomeScreen(
                 }
             } else {
                 Text("Привет, ${current.name}!", style = MaterialTheme.typography.headlineSmall)
-                Spacer(modifier = Modifier.height(8.dp))
-                Text("Твои баллы: ${current.pointsBalance}")
-                Spacer(modifier = Modifier.height(8.dp))
-                Text("Уроки английского скоро появятся здесь.")
+                Spacer(modifier = Modifier.height(16.dp))
+                Text("Твои баллы: ${current.pointsBalance}", style = MaterialTheme.typography.titleMedium)
                 Spacer(modifier = Modifier.height(24.dp))
-                Button(onClick = onLoggedOut, modifier = Modifier.fillMaxWidth()) {
+                Button(
+                    onClick = onLessonClick,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Начать урок")
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(
+                    onClick = onLoggedOut,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                     Text("Выйти")
                 }
             }
