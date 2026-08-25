@@ -1,58 +1,47 @@
-package com.linguatime.kids.screens
+package com.linguatime.kids
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
+import androidx.compose.material3.Surface
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import com.linguatime.kids.screens.RoleSelectionScreen
+import com.linguatime.kids.screens.StubScreen
 
-@Composable
-fun RoleSelectionScreen(
-    onParentClick: () -> Unit,
-    onChildClick: () -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text(
-            text = "LinguaTime Kids",
-            style = MaterialTheme.typography.headlineMedium,
-            textAlign = TextAlign.Center
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = "Учи английский — получай время на телефон",
-            style = MaterialTheme.typography.bodyMedium,
-            textAlign = TextAlign.Center
-        )
-        Spacer(modifier = Modifier.height(32.dp))
-        Button(
-            onClick = onParentClick,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Я родитель")
-        }
-        Spacer(modifier = Modifier.height(12.dp))
-        OutlinedButton(
-            onClick = onChildClick,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Я ребёнок")
+enum class AppScreen {
+    ROLE_SELECTION,
+    PARENT_FLOW,
+    CHILD_FLOW
+}
+
+class MainActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContent {
+            MaterialTheme {
+                Surface {
+                    var screen by remember { mutableStateOf(AppScreen.ROLE_SELECTION) }
+
+                    when (screen) {
+                        AppScreen.ROLE_SELECTION -> RoleSelectionScreen(
+                            onParentClick = { screen = AppScreen.PARENT_FLOW },
+                            onChildClick = { screen = AppScreen.CHILD_FLOW }
+                        )
+                        AppScreen.PARENT_FLOW -> StubScreen(
+                            title = "Зона родителя (в разработке)",
+                            onBack = { screen = AppScreen.ROLE_SELECTION }
+                        )
+                        AppScreen.CHILD_FLOW -> StubScreen(
+                            title = "Зона ребёнка (в разработке)",
+                            onBack = { screen = AppScreen.ROLE_SELECTION }
+                        )
+                    }
+                }
+            }
         }
     }
 }
