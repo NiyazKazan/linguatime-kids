@@ -10,6 +10,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import com.linguatime.kids.data.AuthRepository
+import com.linguatime.kids.data.ChildRepository
+import com.linguatime.kids.data.DeviceStorage
+import com.linguatime.kids.screens.ChildHomeScreen
+import com.linguatime.kids.screens.ChildLoginScreen
+import com.linguatime.kids.screens.ParentAddChildScreen
 import com.linguatime.kids.screens.ParentHomeScreen
 import com.linguatime.kids.screens.ParentPinSetupScreen
 import com.linguatime.kids.screens.ParentSignInScreen
@@ -22,17 +27,22 @@ enum class AppScreen {
     PARENT_SIGN_IN,
     PARENT_SIGN_UP,
     PARENT_PIN_SETUP,
+    PARENT_ADD_CHILD,
     PARENT_HOME,
+    CHILD_LOGIN,
+    CHILD_HOME,
     CHILD_FLOW
 }
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val deviceStorage = DeviceStorage(this)
         setContent {
             MaterialTheme {
                 Surface {
                     val repository = remember { AuthRepository() }
+                    val childRepository = remember { ChildRepository() }
                     var screen by remember { mutableStateOf(AppScreen.ROLE_SELECTION) }
 
                     when (screen) {
@@ -44,7 +54,13 @@ class MainActivity : ComponentActivity() {
                                     AppScreen.PARENT_SIGN_IN
                                 }
                             },
-                            onChildClick = { screen = AppScreen.CHILD_FLOW }
+                            onChildClick = {
+                                screen = if (deviceStorage.childId() != null) {
+                                    AppScreen.CHILD_HOME
+                                } else {
+                                    AppScreen.CHILD_LOGIN
+                                }
+                            }
                         )
                         AppScreen.PARENT_SIGN_IN -> ParentSignInScreen(
                             repository = repository,
@@ -63,9 +79,31 @@ class MainActivity : ComponentActivity() {
                             onDone = { screen = AppScreen.PARENT_HOME },
                             onBack = { screen = AppScreen.ROLE_SELECTION }
                         )
+                        AppScreen.PARENT_ADD_CHILD -> ParentAddChildScreen(
+                            repository = repository,
+                            childRepository = childRepository,
+                            onDone = { screen = AppScreen.PARENT_HOME },
+                            onBack = { screen = AppScreen.PARENT_HOME }
+                        )
                         AppScreen.PARENT_HOME -> ParentHomeScreen(
                             repository = repository,
+                            childRepository = childRepository,
+                            onAddChild = { screen = AppScreen.PARENT_ADD_CHILD },
                             onLoggedOut = { screen = AppScreen.ROLE_SELECTION }
+                        )
+                        AppScreen.CHILD_LOGIN -> ChildLoginScreen(
+                            childRepository = childRepository,
+                            deviceStorage = deviceStorage,
+                            onLoggedIn = { screen = AppScreen.CHILD_HOME },
+                            onBack = { screen = AppScreen.ROLE_SELECTION }
+                        )
+                        AppScreen.CHILD_HOME -> ChildHomeScreen(
+                            childId = deviceStorage.childId() ?: "",
+                            childRepository = childRepository,
+                            onLoggedOut = {
+                                deviceStorage.saveChildId(null)
+                                screen = AppScreen.ROLE_SELECTION
+                            }
                         )
                         AppScreen.CHILD_FLOW -> StubScreen(
                             title = "Зона ребёнка (в разработке)",
