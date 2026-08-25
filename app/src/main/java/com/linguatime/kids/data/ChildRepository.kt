@@ -71,4 +71,24 @@ class ChildRepository {
             pointsBalance = getLong("pointsBalance") ?: 0L
         )
     }
+    suspend fun getChildPoints(childId: String): Long {
+        val doc = firestore.collection("children").document(childId).get().await()
+        return doc.getLong("pointsBalance") ?: 0L
+    }
+
+    suspend fun addPointsTransaction(childId: String, amount: Long, reason: String) {
+        val transactionId = "${childId}_${System.currentTimeMillis()}"
+        val currentPoints = getChildPoints(childId)
+        val newBalance = currentPoints + amount
+        
+        val data = mapOf(
+            "childId" to childId,
+            "amount" to amount,
+            "reason" to reason,
+            "createdAt" to System.currentTimeMillis(),
+            "balanceAfter" to newBalance
+        )
+        firestore.collection("points_transactions").document(transactionId).set(data).await()
+        firestore.collection("children").document(childId).update("pointsBalance", newBalance).await()
+    }
 }

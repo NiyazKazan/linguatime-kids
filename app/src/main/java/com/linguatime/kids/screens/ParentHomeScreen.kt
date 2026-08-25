@@ -28,6 +28,8 @@ fun ParentHomeScreen(
     repository: AuthRepository,
     childRepository: ChildRepository,
     onAddChild: () -> Unit,
+    onScreenTimeSettings: (String) -> Unit,
+    onTimeRequests: () -> Unit,
     onLoggedOut: () -> Unit
 ) {
     var children by remember { mutableStateOf<List<ChildProfile>>(emptyList()) }
@@ -60,11 +62,22 @@ fun ParentHomeScreen(
                     Text(child.name, style = MaterialTheme.typography.titleMedium)
                     Text("Код: ${child.linkCode}")
                     Text(if (child.deviceLinked) "Устройство привязано" else "Устройство не привязано")
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Button(
+                        onClick = { onScreenTimeSettings(child.id) },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Настройки экранного времени")
+                    }
                 }
                 Spacer(modifier = Modifier.height(12.dp))
             }
         }
         Spacer(modifier = Modifier.height(16.dp))
+        Button(onClick = onTimeRequests, modifier = Modifier.fillMaxWidth()) {
+            Text("Запросы на время")
+        }
+        Spacer(modifier = Modifier.height(8.dp))
         Button(onClick = onAddChild, modifier = Modifier.fillMaxWidth()) {
             Text("Добавить ребёнка")
         }
