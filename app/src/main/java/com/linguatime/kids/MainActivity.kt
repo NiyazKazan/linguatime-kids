@@ -40,7 +40,8 @@ enum class AppScreen {
     CHILD_LOGIN,
     CHILD_HOME,
     CHILD_LESSONS_LIST,
-    CHILD_LESSON
+    CHILD_LESSON, 
+    CHILD_REQUEST_TIME
 }
 
 class MainActivity : ComponentActivity() {
@@ -124,15 +125,22 @@ class MainActivity : ComponentActivity() {
                             onLoggedIn = { screen = AppScreen.CHILD_HOME },
                             onBack = { screen = AppScreen.ROLE_SELECTION }
                         )
-                        AppScreen.CHILD_HOME -> ChildHomeScreen(
-                            childId = deviceStorage.childId() ?: "",
-                            childRepository = childRepository,
-                            onLessonClick = { screen = AppScreen.CHILD_LESSONS_LIST },
-                            onLoggedOut = {
-                                deviceStorage.saveChildId(null)
-                                screen = AppScreen.ROLE_SELECTION
-                            }
-                        )
+                        AppScreen.CHILD_HOME -> {
+                            val cId = deviceStorage.childId() ?: ""
+                            // Получаем имя ребёнка для отображения (упрощённо берём из childRepository, 
+                            // но для MVP можно передать заглушку или сделать быстрый запрос)
+                            ChildHomeScreen(
+                                childId = cId,
+                                childName = "Ученик", // В реальном приложении лучше передать имя из ChildProfile
+                                childRepository = childRepository,
+                                onLessonClick = { screen = AppScreen.CHILD_LESSONS_LIST },
+                                onRequestTimeClick = { screen = AppScreen.CHILD_REQUEST_TIME },
+                                onLoggedOut = {
+                                    deviceStorage.saveChildId(null)
+                                    screen = AppScreen.ROLE_SELECTION
+                                }
+                            )
+                        }
                         AppScreen.CHILD_LESSONS_LIST -> LessonsListScreen(
                             childId = deviceStorage.childId() ?: "",
                             lessonRepository = lessonRepository,
@@ -154,6 +162,18 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
                         }
+                        AppScreen.CHILD_REQUEST_TIME -> {
+                            val cId = deviceStorage.childId() ?: ""
+                            ChildRequestTimeScreen(
+                                childId = cId,
+                                childName = "Ученик",
+                                childRepository = childRepository,
+                                rewardRepository = rewardRepository,
+                                onRequested = { screen = AppScreen.CHILD_HOME },
+                                onBack = { screen = AppScreen.CHILD_HOME }
+                            )
+                        }
+
                     }
                 }
             }

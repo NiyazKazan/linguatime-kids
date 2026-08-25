@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -25,8 +26,10 @@ import com.linguatime.kids.data.ChildRepository
 @Composable
 fun ChildHomeScreen(
     childId: String,
+    childName: String,
     childRepository: ChildRepository,
     onLessonClick: () -> Unit,
+    onRequestTimeClick: () -> Unit,
     onLoggedOut: () -> Unit
 ) {
     var child by remember { mutableStateOf<ChildProfile?>(null) }
@@ -58,13 +61,25 @@ fun ChildHomeScreen(
                 Spacer(modifier = Modifier.height(16.dp))
                 Text("Твои баллы: ${current.pointsBalance}", style = MaterialTheme.typography.titleMedium)
                 Spacer(modifier = Modifier.height(24.dp))
+                
                 Button(
                     onClick = onLessonClick,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("Начать урок")
                 }
+                
                 Spacer(modifier = Modifier.height(8.dp))
+                
+                OutlinedButton(
+                    onClick = onRequestTimeClick,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Запросить экранное время")
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+                
                 Button(
                     onClick = onLoggedOut,
                     modifier = Modifier.fillMaxWidth()
