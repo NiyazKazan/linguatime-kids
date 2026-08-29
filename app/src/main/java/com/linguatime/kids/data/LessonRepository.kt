@@ -4,6 +4,8 @@ import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.functions.FirebaseFunctions
 import kotlinx.coroutines.tasks.await
+import com.linguatime.kids.BuildConfig
+
 
 data class Exercise(
     val type: String,
@@ -59,46 +61,118 @@ class LessonRepository {
         childRepo.addPointsTransaction(childId, pointsEarned.toLong(), "lesson_completed_$lessonId")
     }
 
-    // НОВЫЙ МЕТОД: генерация урока через ИИ
+// НОВЫЙ МЕТОД: прямой вызов Hugging Face API из Android
     suspend fun generateLessonWithAI(childId: String, level: String): Lesson {
-        val data = hashMapOf(
-            "childId" to childId,
-            "level" to level
-        )
+        // Токен Hugging Face (ВРЕМЕННО в коде!)
+        val hfToken = com.linguatime.kids.BuildConfig.HF_TOKEN
         
-        val result = functions
-            .getHttpsCallable("generateLesson")
-            .call(data)
-            .await()
+        val systemPrompt = """Ты — дружелюбный учитель английского для детей 8-14 лет.
+        Сгенерируй 3 задания multiple_choice для уровня $level.
+        Верни ТОЛЬКО JSON:
+        {
+          "exercises": [
+            {
+              "type": "multiple_choice",
+              "question": "Вопрос",
+              "options": ["a", "b", "c", "d"],
+              "correctAnswer": "правильный ответ",
+              "points": 5,
+              "explanation": "Объяснение на русском"
+            }
+          ]
+        }""".trimIndent()
+
+        val client = okhttp3.OkHttpClient.Builder()
+            .connectTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
+            .build()
+
+        val request = okhttp3.Request.Builder()
+            .url("https://api-inference.huggingface.co/models/Qwen/Qwen3.8-2.4T-A95B/v1/chat/completions")
+            .addHeader("Authorization", "Bearer $hfToken")
+            .addHeader("Content-Type", "application/json")
+            .post(
+                okhttp3.MediaType.parse("application/json; charset=utf-8")!!.parseString(
+                    """{
+                      "model": "Qwen/Qwen3.8-2.4T-A95B",
+                      "messages": [
+                        {"role": "system", "content": "$systemPrompt"},
+                        {"role": "user", "content": "Сгенерируй урок для уровня $level"}
+                      ],
+                      "temperature": 0.7,
+                      "max_tokens": 1000
+                    }"""
+                )
+            )
+            .build()
+
+        val response = client.newCall(request).execute()
         
-        val resultData = result.data as? Map<*, *>
-            ?: throw Exception("Invalid response from server")
+        if (!response.isSuccessful) {
+            throw Exception("Hugging Face API error: ${response.code} ${response.body?.string()}")
+        }
+
+        val responseBody = response.body?.string()
+            ?: throw Exception("Empty response from API")
+
+        // Парсим JSON ответ
+        val json = org.json.JSONObject(responseBody)
+        val content = json.getJSONArray("choices")
+            .getJSONObject(0)
+            .getJSONObject("message")
+            .getString("content")
+
+        // Извлекаем JSON из ответа
+        val jsonMatch = Regex("""\{[\s\S]*\}""").find(content)
+        val jsonStr = jsonMatch?.value ?: content
         
-        val lessonId = resultData["lessonId"] as? String
-            ?: throw Exception("No lessonId in response")
+        val lessonData = org.json.JSONObject(jsonStr)
+        val exercisesArray = lessonData.getJSONArray("exercises")
         
-        val exercisesList = resultData["exercises"] as? List<*>
-            ?: throw Exception("No exercises in response")
-        
-        val exercises = exercisesList.mapNotNull { ex ->
-            val map = ex as? Map<*, *> ?: return@mapNotNull null
+        val exercises = (0 until exercisesArray.length()).map { i ->
+            val ex = exercisesArray.getJSONObject(i)
             Exercise(
-                type = map["type"] as? String ?: "multiple_choice",
-                question = map["question"] as? String ?: "",
-                options = (map["options"] as? List<*>)?.map { it.toString() } ?: emptyList(),
-                correctAnswer = map["correctAnswer"] as? String ?: "",
-                points = (map["points"] as? Long)?.toInt() ?: 5,
-                explanation = map["explanation"] as? String ?: ""
+                type = ex.optString("type", "multiple_choice"),
+                question = ex.getString("question"),
+                options = (0 until ex.getJSONArray("options").length()).map { j ->
+                    ex.getJSONArray("options").getString(j)
+                },
+                correctAnswer = ex.getString("correctAnswer"),
+                points = ex.optInt("points", 5),
+                explanation = ex.optString("explanation", "")
             )
         }
-        
+
+        // Сохраняем урок в Firestore
+        val lessonRef = firestore.collection("lessons").document()
+        lessonRef.set(
+            mapOf(
+                "title" to "Урок уровня $level",
+                "level" to level,
+                "description" to "Сгенерировано ИИ (Qwen 3.8)",
+                "exercises" to exercises.map { ex ->
+                    mapOf(
+                        "type" to ex.type,
+                        "question" to ex.question,
+                        "options" to ex.options,
+                        "correctAnswer" to ex.correctAnswer,
+                        "points" to ex.points,
+                        "explanation" to ex.explanation
+                    )
+                },
+                "generatedBy" to "Qwen3.8",
+                "createdAt" to com.google.firebase.Timestamp.now(),
+                "childId" to childId
+            )
+        ).await()
+
         return Lesson(
-            id = lessonId,
+            id = lessonRef.id,
             title = "Урок уровня $level",
             level = level,
             description = "Сгенерировано ИИ",
             exercises = exercises,
-            generatedBy = "Qwen"
+            generatedBy = "Qwen3.8"
         )
     }
 

@@ -3,12 +3,24 @@ plugins {
     id("org.jetbrains.kotlin.android")
     id("com.google.gms.google-services")
 }
+import java.util.Properties
+
+val localProperties = Properties().apply {
+    val localPropertiesFile = rootProject.file("local.properties")
+    if (localPropertiesFile.exists()) {
+        load(localPropertiesFile.inputStream())
+    }
+}
+
+val hfToken = localProperties.getProperty("HF_TOKEN", "")
 
 android {
+
     namespace = "com.linguatime.kids"
     compileSdk = 34
 
     defaultConfig {
+        buildConfigField("String", "HF_TOKEN", "\"$hfToken\"")
         applicationId = "com.linguatime.kids"
         minSdk = 26
         targetSdk = 34
@@ -33,6 +45,8 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
+
     }
 
     composeOptions {
@@ -56,6 +70,9 @@ dependencies {
     implementation("com.google.firebase:firebase-firestore-ktx")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
     
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    aimplementation("org.json:json:20231013")
+
     debugImplementation("androidx.compose.ui:ui-tooling")
     
 }
