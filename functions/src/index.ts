@@ -2,10 +2,8 @@ import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 import fetch from "node-fetch";
 
-// Инициализация Firebase Admin
 admin.initializeApp();
 
-// Интерфейсы
 interface Exercise {
   type: string;
   question: string;
@@ -19,14 +17,13 @@ interface LessonResponse {
   exercises: Exercise[];
 }
 
-// Системный промпт для Qwen
 const SYSTEM_PROMPT = `Ты — дружелюбный учитель английского для детей 8-14 лет.
 Твоя цель — довести ученика до уровня C2.
 
 Сгенерируй 3 задания типа multiple_choice на английском языке.
 Сложность должна соответствовать уровню {LEVEL}.
 
-Верни ТОЛЬКО JSON в следующем формате:
+Верни ТОЛЬКО JSON в следующем формате (без markdown, без пояснений):
 {
   "exercises": [
     {
@@ -38,13 +35,9 @@ const SYSTEM_PROMPT = `Ты — дружелюбный учитель англи
       "explanation": "Объяснение на русском, почему это правильный ответ"
     }
   ]
-}
+}`;
 
-Не добавляй никакого текста кроме JSON!`;
-
-// Cloud Function для генерации урока
 export const generateLesson = functions.https.onCall(async (data, context) => {
-  // Проверка авторизации
   if (!context.auth) {
     throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
   }
@@ -56,19 +49,16 @@ export const generateLesson = functions.https.onCall(async (data, context) => {
   }
 
   try {
-    // Получаем токен Hugging Face из переменных окружения
     const hfToken = process.env.HUGGING_FACE_TOKEN;
     
     if (!hfToken) {
       throw new Error('Hugging Face token not configured');
     }
 
-    // Формируем промпт
-    const userPrompt = SYSTEM_PROMPT.replace('{LEVEL}', level);
+    const finalPrompt = SYSTEM_PROMPT.replace('{LEVEL}', level);
 
-    // Запрос к Qwen через Hugging Face API
     const response = await fetch(
-      'https://api-inference.huggingface.co/models/Qwen/Qwen2.5-7B-Instruct/v1/chat/completions',
+      'https://api-inference.huggingface.co/models/Qwen/Qwen3.8-2.4T-A95B/v1/chat/completions',
       {
         method: 'POST',
         headers: {
@@ -76,9 +66,9 @@ export const generateLesson = functions.https.onCall(async (data, context) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'Qwen/Qwen2.5-7B-Instruct',
+          model: 'Qwen/Qwen3.8-2.4T-A95B',
           messages: [
-            { role: 'system', content: SYSTEM_PROMPT },
+            { role: 'system', content: finalPrompt },
             { role: 'user', content: `Сгенерируй урок для уровня ${level}` }
           ],
           temperature: 0.7,
@@ -89,27 +79,38 @@ export const generateLesson = functions.https.onCall(async (data, context) => {
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`Hugging Face API error: ${errorText}`);
+      console.error('HF API error:', response.status, errorText);
+      throw new Error(`Hugging Face API error: ${response.status} ${errorText}`);
     }
 
     const result = await response.json();
     
-    // Парсим ответ от Qwen
     const content = result.choices?.[0]?.message?.content;
     
     if (!content) {
       throw new Error('Empty response from Qwen');
     }
 
-    // Пытаемся распарсить JSON
+    console.log('Qwen response:', content.substring(0, 500));
+
+    let jsonStr = content;
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      jsonStr = jsonMatch[0];
+    }
+
     let lessonData: LessonResponse;
     try {
-      lessonData = JSON.parse(content);
+      lessonData = JSON.parse(jsonStr);
     } catch (parseError) {
+      console.error('Parse error:', parseError, 'Content:', content);
       throw new Error('Failed to parse Qwen response as JSON');
     }
 
-    // Сохраняем урок в Firestore
+    if (!lessonData.exercises || !Array.isArray(lessonData.exercises)) {
+      throw new Error('Invalid lesson structure from Qwen');
+    }
+
     const lessonRef = admin.firestore().collection('lessons').doc();
     await lessonRef.set({
       title: `Урок уровня ${level}`,
@@ -123,7 +124,7 @@ export const generateLesson = functions.https.onCall(async (data, context) => {
         points: ex.points,
         explanation: ex.explanation || ''
       })),
-      generatedBy: 'Qwen',
+      generatedBy: 'Qwen3.8',
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       childId: childId
     });
@@ -133,8 +134,8 @@ export const generateLesson = functions.https.onCall(async (data, context) => {
       exercises: lessonData.exercises
     };
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error generating lesson:', error);
-    throw new functions.https.HttpsError('internal', 'Failed to generate lesson');
+    throw new functions.https.HttpsError('internal', error.message || 'Failed to generate lesson');
   }
 });
