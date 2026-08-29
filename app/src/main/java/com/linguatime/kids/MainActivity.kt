@@ -153,6 +153,7 @@ class MainActivity : ComponentActivity() {
                         }
                         AppScreen.CHILD_LESSONS_LIST -> LessonsListScreen(
                             childId = deviceStorage.childId() ?: "",
+                            childLevel = "A1", // TODO: получать реальный уровень ребёнка
                             lessonRepository = lessonRepository,
                             onLessonClick = { lesson ->
                                 selectedLesson = lesson
@@ -160,6 +161,7 @@ class MainActivity : ComponentActivity() {
                             },
                             onBack = { screen = AppScreen.CHILD_HOME }
                         )
+
                         AppScreen.CHILD_LESSON -> {
                             val lesson = selectedLesson
                             if (lesson != null) {
