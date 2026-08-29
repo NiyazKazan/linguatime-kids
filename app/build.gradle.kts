@@ -71,7 +71,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
     
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
-    aimplementation("org.json:json:20231013")
+    implementation("org.json:json:20231013")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
     
