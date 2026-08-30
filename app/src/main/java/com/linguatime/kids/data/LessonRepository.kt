@@ -87,24 +87,28 @@ class LessonRepository {
             .readTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
             .build()
 
-        val request = okhttp3.Request.Builder()
-            .url("https://api-inference.huggingface.co/models/Qwen/Qwen3.8-2.4T-A95B/v1/chat/completions")
-            .addHeader("Authorization", "Bearer $hfToken")
-            .addHeader("Content-Type", "application/json")
-            .post(
-                okhttp3.MediaType.parse("application/json; charset=utf-8")!!.parseString(
-                    """{
-                      "model": "Qwen/Qwen3.8-2.4T-A95B",
-                      "messages": [
-                        {"role": "system", "content": "$systemPrompt"},
-                        {"role": "user", "content": "Сгенерируй урок для уровня $level"}
-                      ],
-                      "temperature": 0.7,
-                      "max_tokens": 1000
-                    }"""
-                )
-            )
-            .build()
+val JSON = okhttp3.MediaType.parse("application/json; charset=utf-8")
+
+val request = okhttp3.Request.Builder()
+    .url("https://api-inference.huggingface.co/models/Qwen/Qwen3.8-2.4T-A95B/v1/chat/completions")
+    .addHeader("Authorization", "Bearer $hfToken")
+    .addHeader("Content-Type", "application/json")
+    .post(
+        okhttp3.RequestBody.create(
+            JSON,
+            """{
+              "model": "Qwen/Qwen3.8-2.4T-A95B",
+              "messages": [
+                {"role": "system", "content": "$systemPrompt"},
+                {"role": "user", "content": "Сгенерируй урок для уровня $level"}
+              ],
+              "temperature": 0.7,
+              "max_tokens": 1000
+            }"""
+        )
+    )
+    .build()
+
 
         val response = client.newCall(request).execute()
         
