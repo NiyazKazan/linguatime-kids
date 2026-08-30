@@ -6,6 +6,11 @@ import com.google.firebase.functions.FirebaseFunctions
 import kotlinx.coroutines.tasks.await
 import com.linguatime.kids.BuildConfig
 
+import com.google.firebase.Timestamp
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONObject
+
 
 data class Exercise(
     val type: String,
