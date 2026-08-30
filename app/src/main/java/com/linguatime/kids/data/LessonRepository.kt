@@ -62,9 +62,14 @@ class LessonRepository {
     }
 
 // НОВЫЙ МЕТОД: прямой вызов Hugging Face API из Android
+// НОВЫЙ МЕТОД: прямой вызов Hugging Face API из Android
     suspend fun generateLessonWithAI(childId: String, level: String): Lesson {
-        // Токен Hugging Face (ВРЕМЕННО в коде!)
+        // Токен Hugging Face из BuildConfig
         val hfToken = com.linguatime.kids.BuildConfig.HF_TOKEN
+        
+        if (hfToken.isEmpty()) {
+            throw Exception("Hugging Face token is empty. Check local.properties")
+        }
         
         val systemPrompt = """Ты — дружелюбный учитель английского для детей 8-14 лет.
         Сгенерируй 3 задания multiple_choice для уровня $level.
@@ -82,38 +87,37 @@ class LessonRepository {
           ]
         }""".trimIndent()
 
+        // Используем правильный OkHttp 4.x API
+        val mediaType = "application/json; charset=utf-8".toMediaType()
+        val jsonBody = """{
+          "model": "Qwen/Qwen3.8-2.4T-A95B",
+          "messages": [
+            {"role": "system", "content": "$systemPrompt"},
+            {"role": "user", "content": "Сгенерируй урок для уровня $level"}
+          ],
+          "temperature": 0.7,
+          "max_tokens": 1000
+        }"""
+        
+        val body = jsonBody.toRequestBody(mediaType)
+        
         val client = okhttp3.OkHttpClient.Builder()
             .connectTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
             .readTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
             .build()
 
-val JSON = okhttp3.MediaType.parse("application/json; charset=utf-8")
-
-val request = okhttp3.Request.Builder()
-    .url("https://api-inference.huggingface.co/models/Qwen/Qwen3.8-2.4T-A95B/v1/chat/completions")
-    .addHeader("Authorization", "Bearer $hfToken")
-    .addHeader("Content-Type", "application/json")
-    .post(
-        okhttp3.RequestBody.create(
-            JSON,
-            """{
-              "model": "Qwen/Qwen3.8-2.4T-A95B",
-              "messages": [
-                {"role": "system", "content": "$systemPrompt"},
-                {"role": "user", "content": "Сгенерируй урок для уровня $level"}
-              ],
-              "temperature": 0.7,
-              "max_tokens": 1000
-            }"""
-        )
-    )
-    .build()
-
+        val request = okhttp3.Request.Builder()
+            .url("https://api-inference.huggingface.co/models/Qwen/Qwen3.8-2.4T-A95B/v1/chat/completions")
+            .addHeader("Authorization", "Bearer $hfToken")
+            .addHeader("Content-Type", "application/json")
+            .post(body)
+            .build()
 
         val response = client.newCall(request).execute()
         
         if (!response.isSuccessful) {
-            throw Exception("Hugging Face API error: ${response.code} ${response.body?.string()}")
+            val errorBody = response.body?.string() ?: "Unknown error"
+            throw Exception("Hugging Face API error: ${response.code} $errorBody")
         }
 
         val responseBody = response.body?.string()
@@ -121,10 +125,10 @@ val request = okhttp3.Request.Builder()
 
         // Парсим JSON ответ
         val json = org.json.JSONObject(responseBody)
-        val content = json.getJSONArray("choices")
-            .getJSONObject(0)
-            .getJSONObject("message")
-            .getString("content")
+        val choices = json.getJSONArray("choices")
+        val firstChoice = choices.getJSONObject(0)
+        val message = firstChoice.getJSONObject("message")
+        val content = message.getString("content")
 
         // Извлекаем JSON из ответа
         val jsonMatch = Regex("""\{[\s\S]*\}""").find(content)
@@ -179,6 +183,7 @@ val request = okhttp3.Request.Builder()
             generatedBy = "Qwen3.8"
         )
     }
+
 
     private fun DocumentSnapshot.toLesson(): Lesson? {
         val title = getString("title") ?: return null
